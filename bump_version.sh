@@ -52,8 +52,12 @@ PUSH_TAG=false
 AUTO_COMMIT=false
 SKIP_SUBMIT=false
 SKIP_CHANGELOG=false
+BUILD_TARGET=""
+BUILD_FLAVOR=""
 
-for arg in "$@"; do
+while [[ $# -gt 0 ]]; do
+  arg="$1"
+  shift
   case $arg in
     major|minor|patch|build)
       BUMP_TYPE="$arg"
@@ -87,6 +91,15 @@ for arg in "$@"; do
     --skip-changelog)
       SKIP_CHANGELOG=true
       ;;
+    --target)
+      BUILD_TARGET="$1"
+      BUILD_TARGET="${BUILD_TARGET//\\//}"
+      shift
+      ;;
+    --flavor)
+      BUILD_FLAVOR="$1"
+      shift
+      ;;
     --help|-h)
       echo "Flutter Automatic Deploy - Universal Version Bumper"
       echo "Built by Filip Kowalski | @filippkowalski | fkowalski.com"
@@ -109,6 +122,8 @@ for arg in "$@"; do
       echo "  --commit           Auto-commit version changes"
       echo "  --skip-submit      Skip automatic App Store submission (iOS only)"
       echo "  --skip-changelog   Skip changelog generation"
+      echo "  --target PATH      Specify target file for Flutter build"
+      echo "  --flavor NAME      Specify flavor for Flutter build"
       echo "  --dry-run          Preview changes without modifying files"
       echo "  --help, -h         Show this help message"
       echo ""
@@ -121,6 +136,7 @@ for arg in "$@"; do
       echo "  bump_version build --release           # Bump, tag, build, upload, submit"
       echo "  bump_version minor --commit --push-tag # Bump, commit, tag, push"
       echo "  bump_version patch --release --skip-submit # Upload without auto-submit"
+      echo "  bump_version patch --release --target lib/main_prod.dart --flavor production"
       exit 0
       ;;
     [0-9]*.[0-9]*.[0-9]*+[0-9]*)
@@ -577,7 +593,10 @@ if [ "$RUN_RELEASE" = true ]; then
     fi
 
     echo -e "${BLUE}  Building IPA...${NC}"
-    flutter build ipa
+    BUILD_CMD="flutter build ipa"
+    [ -n "$BUILD_TARGET" ] && BUILD_CMD="$BUILD_CMD --target $BUILD_TARGET"
+    [ -n "$BUILD_FLAVOR" ] && BUILD_CMD="$BUILD_CMD --flavor $BUILD_FLAVOR"
+    eval "$BUILD_CMD"
 
     echo -e "${BLUE}  Uploading to App Store Connect...${NC}"
     xcrun altool --upload-app --type ios \
@@ -629,7 +648,10 @@ if [ "$RUN_RELEASE" = true ]; then
     echo ""
     echo -e "${CYAN}Android Release${NC}"
     echo -e "${BLUE}  Building App Bundle...${NC}"
-    flutter build appbundle --release
+    BUILD_CMD="flutter build appbundle --release"
+    [ -n "$BUILD_TARGET" ] && BUILD_CMD="$BUILD_CMD --target $BUILD_TARGET"
+    [ -n "$BUILD_FLAVOR" ] && BUILD_CMD="$BUILD_CMD --flavor $BUILD_FLAVOR"
+    eval "$BUILD_CMD"
 
     echo -e "${GREEN}✓ Android build complete${NC}"
 
